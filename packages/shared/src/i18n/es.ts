@@ -1229,11 +1229,6 @@ export const es = {
       "fallback": "Guardar en EdgeEver",
       "cancel": "Cancelar",
       "imgbed": {
-        "browserDescription": "La aplicación web se conecta directamente a ImgBed. Use HTTPS y permita CORS para este sitio EdgeEver, incluido el encabezado Authorization. Para servidores locales o privados se recomienda la aplicación de escritorio.",
-        "browserTokenDescription": "Cree un token con permiso upload en ImgBed. Se guarda solo en este navegador, no se sincroniza con otros dispositivos y se envía directamente a ImgBed al subir imágenes.",
-        "browserAddress": "Introduzca una dirección HTTPS de ImgBed válida sin credenciales, parámetros de consulta ni fragmento.",
-        "browserNetwork": "No se pudo leer la respuesta de ImgBed. Revise la red, el certificado HTTPS y CORS (permita este sitio y Authorization). La imagen de prueba podría haberse subido; repetir la prueba puede crear duplicados.",
-        "browserUploadFailed": "Revise la dirección, el token, la red y CORS de ImgBed. La imagen podría haberse subido sin que el navegador pudiera leer el resultado. Reintentar puede crear duplicados. También puede guardar en EdgeEver o cancelar.",
         "option": "CloudFlare ImgBed",
         "description": "Sube las imágenes nuevas directamente a tu CloudFlare ImgBed autoalojado e inserta el enlace de la imagen obtenido en la nota.",
         "endpoint": "Dirección de ImgBed",
@@ -1509,8 +1504,6 @@ export const es = {
     }
   },
   "plugins": {
-    secureFeaturesUnavailable: "La instalación y la verificación de integridad están disponibles. Los ajustes secretos cifrados y los catálogos comunitarios firmados requieren HTTPS o localhost.",
-    restoreFailed: "No se pudieron restaurar algunos complementos o temas. Revisa los errores e inténtalo de nuevo.",
     "title": "Plugins y temas",
     "developerDocs": "Desarrollo de plugins",
     "manifestUrl": "URL del manifiesto de la extensión",
@@ -4025,7 +4018,6 @@ export const es = {
     "refreshNow": "Recargar ahora",
     "closeNotice": "Cerrar aviso de actualización",
     "sidebarDownloads": "Descargar clientes",
-    clientsAndExtensions: "Clientes y extensiones del navegador",
     "sidebarDownloadsTitle": "Descargar clientes y extensiones de navegador de EdgeEver",
     "sidebarGroupApps": "Apps y clientes",
     "sidebarGroupClippers": "Web Clipper para el navegador",

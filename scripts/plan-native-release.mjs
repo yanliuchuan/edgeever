@@ -35,7 +35,6 @@ export const planNativeRelease = (platform, changedFiles) => {
             "crates/desktop-sidecar/",
             "migrations/",
             "packages/client/",
-            "packages/image-host/",
             "packages/shared/",
           ];
 

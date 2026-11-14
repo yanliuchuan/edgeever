@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { expandImgBedFolder, imgBedAutoRetry, imgBedFolderError, imgBedSiteKey, IMGBED_FOLDER_PLACEHOLDERS, IMGBED_MAX_CHANNEL_NAME_LENGTH, IMGBED_NAME_TYPES, isImgBedChannelNameValid, IMGBED_SAMPLE_MEMO_ID, IMGBED_UPLOAD_CHANNELS, type ImgBedNameType, type ImgBedUploadChannel } from "@/lib/imgbed";
-import { canUseImgBed, canListImgBedChannels, isBrowserImgBed, testImgBedConnection, listImgBedChannels, hasPicGoBridge, readPicGoPreference, takePicGoServerKey, writePicGoPreference, type ImgBedPreference, type PicGoPreference } from "@/lib/picgo";
+import { hasImgBedBridge, hasImgBedChannelsBridge, hasPicGoBridge, readPicGoPreference, takePicGoServerKey, writePicGoPreference, type ImgBedPreference, type PicGoPreference } from "@/lib/picgo";
 import { SETTINGS_ITEM_DESCRIPTION_CLASSNAME, SETTINGS_ITEM_TITLE_CLASSNAME } from "./settings-ui";
 
 const picGoTargetId = (value: PicGoPreference) => value.provider === "imgbed"
@@ -30,8 +30,6 @@ const imgBedFailureKey = (error: unknown, unsupportedKey: string, fallbackKey: s
     return unsupportedKey;
   }
   if (message.includes("IMGBED_CHANNEL_NAME:")) return "settings.picgo.imgbed.channelNameNotFound";
-  if (isBrowserImgBed() && (message.includes("IMGBED_BROWSER_HTTPS") || message.includes("IMGBED_BROWSER_ADDRESS") || message.includes("Use a CloudFlare ImgBed address"))) return "settings.picgo.imgbed.browserAddress";
-  if (message.includes("IMGBED_BROWSER_NETWORK") || message.includes("IMGBED_BROWSER_RESPONSE")) return "settings.picgo.imgbed.browserNetwork";
   return fallbackKey;
 };
 const sameImgBed = (left: ImgBedPreference, right: ImgBedPreference) => picGoTargetId({ provider: "imgbed", endpoint: "", serverKey: "", imgbed: left })
@@ -47,7 +45,7 @@ export const PicGoSettingsItem = () => {
   const [channelList, setChannelList] = useState<ImgBedChannelList | null>(null);
   const [channelListError, setChannelListError] = useState("");
   const [loadingChannels, setLoadingChannels] = useState(false);
-  const hostAvailable = draft.provider === "imgbed" ? canUseImgBed() : hasPicGoBridge();
+  const desktopAvailable = draft.provider === "imgbed" ? hasImgBedBridge() : hasPicGoBridge();
   const dirty = draft.provider !== saved.provider || draft.endpoint !== saved.endpoint || draft.serverKey !== saved.serverKey
     || !sameImgBed(draft.imgbed, saved.imgbed);
   const folderError = imgBedFolderError(draft.imgbed.uploadFolder);
@@ -62,13 +60,13 @@ export const PicGoSettingsItem = () => {
   const [channelListOpen, setChannelListOpen] = useState(false);
   const savedNameMissing = Boolean(loadedChannels && !channelListOpen && channelNameValid && draft.imgbed.channelName.trim()
     && !loadedChannels.includes(draft.imgbed.channelName.trim()));
-  const canLoadChannels = canListImgBedChannels() && Boolean(draft.imgbed.endpoint.trim() && draft.imgbed.token.trim()) && !busy && !loadingChannels;
+  const canLoadChannels = hasImgBedChannelsBridge() && Boolean(draft.imgbed.endpoint.trim() && draft.imgbed.token.trim()) && !busy && !loadingChannels;
   // While the list loads, testing, saving and every setting except the channel name are
   // locked, so the source of a pending request cannot change and needs no staleness
   // check. The channel name stays editable so a focused field keeps its focus.
   const locked = busy || loadingChannels;
-  const canTest = hostAvailable && (draft.provider !== "imgbed" || imgBedReady);
-  const canSave = dirty && (draft.provider === "edgeever" || (hostAvailable && testedTarget === picGoTargetId(draft)));
+  const canTest = desktopAvailable && (draft.provider !== "imgbed" || imgBedReady);
+  const canSave = dirty && (draft.provider === "edgeever" || (desktopAvailable && testedTarget === picGoTargetId(draft)));
   const updateImgBed = (patch: Partial<ImgBedPreference>) => {
     setDraft({ ...draft, imgbed: { ...draft.imgbed, ...patch } });
     if ("endpoint" in patch || "token" in patch) setChannelListError("");
@@ -83,7 +81,7 @@ export const PicGoSettingsItem = () => {
     const prefix = draft.provider === "imgbed" ? "settings.picgo.imgbed" : "settings.picgo";
     try {
       if (draft.provider === "imgbed") {
-        await testImgBedConnection({
+        await window.edgeeverDesktop!.testImgBedConnection!({
           endpoint: draft.imgbed.endpoint, token: draft.imgbed.token, nameType: draft.imgbed.nameType,
           uploadChannel: draft.imgbed.uploadChannel, channelName: draft.imgbed.channelName, serverCompress: draft.imgbed.serverCompress,
           // With a channel name the main process tests without retry regardless.
@@ -106,7 +104,7 @@ export const PicGoSettingsItem = () => {
     setLoadingChannels(true);
     setChannelListError("");
     try {
-      const list = await listImgBedChannels({ endpoint: draft.imgbed.endpoint, token: draft.imgbed.token });
+      const list = await window.edgeeverDesktop!.listImgBedChannels!({ endpoint: draft.imgbed.endpoint, token: draft.imgbed.token });
       setChannelList({ source: requested, ...list });
     } catch (error) {
       // A failed reload keeps a list that is still valid for this address and token.
@@ -143,7 +141,7 @@ export const PicGoSettingsItem = () => {
       </div>
       {draft.provider === "picgo" ? (
         <div className="grid gap-2 sm:ml-7">
-          {!hostAvailable ? <p className={SETTINGS_ITEM_DESCRIPTION_CLASSNAME}>{t("settings.picgo.webPreview")}</p> : null}
+          {!desktopAvailable ? <p className={SETTINGS_ITEM_DESCRIPTION_CLASSNAME}>{t("settings.picgo.webPreview")}</p> : null}
           <p className={SETTINGS_ITEM_DESCRIPTION_CLASSNAME}>{t("settings.picgo.description")}</p>
           <label htmlFor="picgo-endpoint" className={SETTINGS_ITEM_TITLE_CLASSNAME}>{t("settings.picgo.endpoint")}</label>
           <Input id="picgo-endpoint" value={draft.endpoint} disabled={locked} onChange={(event) => {
@@ -164,9 +162,8 @@ export const PicGoSettingsItem = () => {
       ) : null}
       {draft.provider === "imgbed" ? (
         <div className="grid gap-2 sm:ml-7">
-          {!hostAvailable ? <p className={SETTINGS_ITEM_DESCRIPTION_CLASSNAME}>{t("settings.picgo.webPreview")}</p> : null}
+          {!desktopAvailable ? <p className={SETTINGS_ITEM_DESCRIPTION_CLASSNAME}>{t("settings.picgo.webPreview")}</p> : null}
           <p className={SETTINGS_ITEM_DESCRIPTION_CLASSNAME}>{t("settings.picgo.imgbed.description")}</p>
-          {isBrowserImgBed() ? <p className={SETTINGS_ITEM_DESCRIPTION_CLASSNAME}>{t("settings.picgo.imgbed.browserDescription")}</p> : null}
           <label htmlFor="imgbed-endpoint" className={SETTINGS_ITEM_TITLE_CLASSNAME}>{t("settings.picgo.imgbed.endpoint")}</label>
           <Input id="imgbed-endpoint" value={draft.imgbed.endpoint} disabled={locked} placeholder="https://img.example.com"
             onChange={(event) => updateImgBed({ endpoint: event.target.value.trim() })} spellCheck={false} inputMode="url" autoComplete="off" />
@@ -174,7 +171,7 @@ export const PicGoSettingsItem = () => {
           <label htmlFor="imgbed-token" className={SETTINGS_ITEM_TITLE_CLASSNAME}>{t("settings.picgo.imgbed.token")}</label>
           <Input id="imgbed-token" name="imgbed-token" type="password" value={draft.imgbed.token} disabled={locked}
             onChange={(event) => updateImgBed({ token: event.target.value.trim() })} spellCheck={false} autoComplete="new-password" maxLength={1024} />
-          <p className={SETTINGS_ITEM_DESCRIPTION_CLASSNAME}>{t(isBrowserImgBed() ? "settings.picgo.imgbed.browserTokenDescription" : "settings.picgo.imgbed.tokenDescription")}</p>
+          <p className={SETTINGS_ITEM_DESCRIPTION_CLASSNAME}>{t("settings.picgo.imgbed.tokenDescription")}</p>
           <label htmlFor="imgbed-folder" className={SETTINGS_ITEM_TITLE_CLASSNAME}>{t("settings.picgo.imgbed.folder")}</label>
           <Input id="imgbed-folder" value={draft.imgbed.uploadFolder} disabled={locked} placeholder="notes/{Y}/{m}" aria-invalid={folderError ? true : undefined}
             onChange={(event) => updateImgBed({ uploadFolder: event.target.value })} spellCheck={false} autoComplete="off" maxLength={200} />
@@ -217,7 +214,7 @@ export const PicGoSettingsItem = () => {
             <ComboboxInput labelledBy="imgbed-channel-name-label" className="min-w-0 flex-1" value={draft.imgbed.channelName}
               options={channelOptions} onValueChange={(channelName) => updateImgBed({ channelName })} onOpenChange={setChannelListOpen}
               placeholder={t("settings.picgo.imgbed.channelNamePlaceholder")} disabled={busy} invalid={!channelNameValid} maxLength={IMGBED_MAX_CHANNEL_NAME_LENGTH} />
-            {canListImgBedChannels() ? (
+            {hasImgBedChannelsBridge() ? (
               <Button variant="outline" size="sm" className="h-auto shrink-0" disabled={!canLoadChannels} onClick={() => void loadChannels()}>
                 {t(loadingChannels ? "settings.picgo.imgbed.channelListLoading" : "settings.picgo.imgbed.channelListLoad")}
               </Button>
